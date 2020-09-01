@@ -75,9 +75,6 @@ static ngx_int_t
 init_process(ngx_cycle_t *cycle);
 
 static void
-exit_process(ngx_cycle_t *cycle);
-
-static void
 refresh_timeout_handler(ngx_event_t *ev);
 
 static void
@@ -134,7 +131,7 @@ ngx_module_t ngx_http_upstream_serverlist_module = {
     init_process,                          /* init process */
     NULL,                                  /* init thread */
     NULL,                                  /* exit thread */
-    exit_process,                          /* exit process */
+    NULL,                          /* exit process */
     NULL,                                  /* exit master */
     NGX_MODULE_V1_PADDING
 };
@@ -454,29 +451,6 @@ init_process(ngx_cycle_t *cycle) {
     }
 
     return NGX_OK;
-}
-
-static void
-exit_process(ngx_cycle_t *cycle) {
-    main_conf *mcf = ngx_http_cycle_get_module_main_conf(cycle,
-        ngx_http_upstream_serverlist_module);
-    serverlist *sls = mcf->serverlists.elts;
-    service_conn *scs = mcf->service_conns.elts;
-    ngx_uint_t i;
-
-    for (i = 0; i < mcf->serverlists.nelts; i++) {
-        if (sls[i].pool) {
-            ngx_destroy_pool(sls[i].pool);
-            sls[i].pool = NULL;
-        }
-    }
-
-    for (i = 0; i < mcf->service_conns.nelts; i++) {
-        if (scs[i].peer_conn.connection) {
-            ngx_close_connection(scs[i].peer_conn.connection);
-            scs[i].peer_conn.connection = NULL;
-        }
-    }
 }
 
 static void
