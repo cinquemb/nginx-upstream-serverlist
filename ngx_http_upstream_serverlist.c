@@ -1087,9 +1087,6 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
         return -1;
     }
 
-    init = uscf->peer.init_upstream ? uscf->peer.init_upstream
-        : ngx_http_upstream_init_round_robin;
-
     ngx_memzero(&cf, sizeof cf);
     cf.name = "serverlist_init_upstream";
     cf.cycle = (ngx_cycle_t *) ngx_cycle;
@@ -1103,13 +1100,18 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     old_servers = uscf->servers;
     uscf->servers = new_servers;
 
-    if (init(&cf, uscf) != NGX_OK) {
+    if (ngx_http_upstream_init_round_robin(&cf, uscf) != NGX_OK) {
+        // see: https://github.com/GUI/nginx-upstream-dynamic-servers/pull/33/files
+        /* if you read the native code you can find out that all you need to do here is ngx_http_upstream_init_round_robin if you don't use other third party modules in the init process,
+            otherwise it may cause memory problem if you use keepalive in the upstream block (it reinitialize the keepalive queue, when remote close the connection 2 TTL later, it will crash)
+        */
         ngx_log_error(NGX_LOG_ERR, log, 0,
             "upstream-serverlist: refresh upstream %V failed, rollback it",
             &uscf->host);
         // cf.pool = sl->pool;
         uscf->servers = old_servers;
-        init(&cf, uscf);
+        // this may not work if old servers do not exist?
+        ngx_http_upstream_init_round_robin(&cf, uscf);
         return -1;
     }
 
