@@ -1065,7 +1065,6 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     main_conf *mcf = ngx_http_cycle_get_module_main_conf(ngx_cycle,
         ngx_http_upstream_serverlist_module);
     ngx_http_upstream_srv_conf_t *uscf = sl->upstream_conf;
-    ngx_http_upstream_init_pt init = NULL;
     ngx_conf_t cf = {0};
     ngx_array_t *new_servers = NULL;
     ngx_array_t *old_servers = uscf->servers;
