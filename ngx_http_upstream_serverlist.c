@@ -266,15 +266,14 @@ serverlist_service_directive(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy) {
 
 static char *
 serverlist_directive(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy) {
-    ngx_http_upstream_srv_conf_t *uscf = ngx_http_conf_get_module_srv_conf(cf,
-        ngx_http_upstream_module);
-
     if (cf->args->nelts > 2) {
         ngx_conf_log_error(NGX_LOG_ERR, cf, 0,
             "upstream-serverlist: serverlist only need 0 or 1 args");
         return NGX_CONF_ERROR;
     }
 
+    ngx_http_upstream_srv_conf_t *uscf = ngx_http_conf_get_module_srv_conf(cf,
+        ngx_http_upstream_module);
     main_conf *mcf = ngx_http_conf_get_module_main_conf(cf,
         ngx_http_upstream_serverlist_module);
     serverlist *sl = NULL;
