@@ -185,17 +185,17 @@ create_main_conf(ngx_conf_t *cf) {
 
 static char *
 serverlist_service_directive(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy) {
-    if (cf->args->nelts <= 1) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0,
-            "upstream-serverlist: serverlist_service need at least 1 arg");
-        return NGX_CONF_ERROR;
-    }
-
     main_conf *mcf = ngx_http_conf_get_module_main_conf(cf,
         ngx_http_upstream_serverlist_module);
     ngx_str_t *s = NULL;
     ngx_uint_t i = 1;
     ngx_int_t ret = -1;
+
+    if (cf->args->nelts <= 1) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0,
+            "upstream-serverlist: serverlist_service need at least 1 arg");
+        return NGX_CONF_ERROR;
+    }
 
     for (i = 1; i < cf->args->nelts; i++) {
         s = (ngx_str_t *)cf->args->elts + i;
@@ -266,17 +266,17 @@ serverlist_service_directive(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy) {
 
 static char *
 serverlist_directive(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy) {
-    if (cf->args->nelts > 2) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0,
-            "upstream-serverlist: serverlist only need 0 or 1 args");
-        return NGX_CONF_ERROR;
-    }
-
     ngx_http_upstream_srv_conf_t *uscf = ngx_http_conf_get_module_srv_conf(cf,
         ngx_http_upstream_module);
     main_conf *mcf = ngx_http_conf_get_module_main_conf(cf,
         ngx_http_upstream_serverlist_module);
     serverlist *sl = NULL;
+
+    if (cf->args->nelts > 2) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0,
+            "upstream-serverlist: serverlist only need 0 or 1 args");
+        return NGX_CONF_ERROR;
+    }
 
     sl = ngx_array_push(&mcf->serverlists);
     if (sl == NULL) {
