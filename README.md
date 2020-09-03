@@ -53,7 +53,7 @@ NOTE: One can use "Last-Modified" or "Etag" HTTP header in response to prevent
 wasted upstream refresh actions, Especially when thousands serverlists and
 upstreams configured.
 
-NOTE: Different server names cannot share the same upstream right now, if they do, it will cause as sefgault at runtime
+NOTE: Different server names cannot share the same upstream right now, if they do, it will cause as segfault at runtime. Will also segfault at runtime if you leave out the syntax in the config.
 
 ## Directives
 ### serverlist_service
