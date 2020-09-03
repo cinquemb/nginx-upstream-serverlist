@@ -53,6 +53,8 @@ NOTE: One can use "Last-Modified" or "Etag" HTTP header in response to prevent
 wasted upstream refresh actions, Especially when thousands serverlists and
 upstreams configured.
 
+NOTE: Different server names cannot share the same upstream right now, if they do, it will cause as sefgault at runtime
+
 ## Directives
 ### serverlist_service
 * Syntax: `serverlist_service url=http://xxx/ [conf_dump_dir=dumped_dir/] [interval=5s] [timeout=2s] [concurrency=1];`
