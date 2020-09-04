@@ -18,6 +18,14 @@
 #define CACHE_LINE_SIZE 128
 #define DEFAULT_SERVERLIST_POOL_SIZE 1024
 
+
+typedef struct
+{
+    ngx_queue_t queue;
+    ngx_pool_t *pool;
+    ngx_uint_t refer_num;               /* to count the upstream that refers this memory pool*/
+} serverlist_pool_node_t;
+
 typedef struct {
     ngx_pool_t                   *new_pool;
     ngx_pool_t                   *pool;
@@ -807,6 +815,7 @@ get_one_line(u_char *buf, u_char *buf_end, ngx_str_t *line) {
 static ngx_array_t *
 get_servers(ngx_pool_t *pool, ngx_str_t *body, ngx_log_t *log) {
     ngx_int_t ret = -1;
+    // this is the pool that needs to be cleared
     ngx_array_t *servers = ngx_array_create(pool, 2,
         sizeof(ngx_http_upstream_server_t));
     ngx_http_upstream_server_t *server = NULL;
@@ -845,6 +854,7 @@ get_servers(ngx_pool_t *pool, ngx_str_t *body, ngx_log_t *log) {
                     break;
                 }
 
+                // this causes the memory leak when servers are never removed
                 server = ngx_array_push(servers);
                 ngx_memzero(server, sizeof *server);
                 server->name = u.url;
@@ -1071,7 +1081,33 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
 
     // use mcf->pool, avoid coredump, will lead mem leak
     // new_servers = get_servers(sl->new_pool, body, log);
-    new_servers = get_servers(mcf->conf_pool, body, log);
+    /*
+        TODO: THE CONF POOL MUST BE CLEANED UP EVERYTIME THIS REFRESHES THE UPSTREAMS
+    */
+    /*
+    pool_node = ngx_palloc(
+        mcf->conf_pool, sizeof(serverlist_pool_node_t));
+    if (pool_node == NULL){
+        ngx_log_error(NGX_LOG_ERR, ev->log, 0,
+                      "upstream-serverlist: Could not create pool_node");
+        goto exit;
+    }
+    pool_node->pool = mcf->conf_pool;
+    pool_node->refer_num = 0;*/
+
+    /*
+
+        Try to add server a new pool
+        - if servers have changed
+            - swap new pool with old pool
+            - delete old pool
+
+        //https://nginx.org/en/docs/dev/development_guide.html#pool
+    */
+
+    ngx_pool_t *tmp_pool = ngx_create_pool(DEFAULT_SERVERLIST_POOL_SIZE, log);
+    //new_servers = get_servers(mcf->conf_pool, body, log);
+    new_servers = get_servers(tmp_pool, body, log);
     if (new_servers == NULL || new_servers->nelts <= 0) {
         ngx_log_error(NGX_LOG_ERR, log, 0,
             "upstream-serverlist: parse serverlist %V failed", &sl->name);
@@ -1079,6 +1115,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     }
 
     if (!upstream_servers_changed(uscf->servers, new_servers)) {
+        ngx_destroy_pool(tmp_pool);
         ngx_log_debug(NGX_LOG_INFO, log, 0,
             "upstream-serverlist: serverlist %V nothing changed",&sl->name);
         // once return -1, everything in the old pool will kept and the new pool
@@ -1086,10 +1123,14 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
         return -1;
     }
 
+
     ngx_memzero(&cf, sizeof cf);
     cf.name = "serverlist_init_upstream";
     cf.cycle = (ngx_cycle_t *) ngx_cycle;
+    
     // cf.pool = sl->new_pool;
+    mcf->conf_pool = tmp_pool;
+    
     cf.pool = mcf->conf_pool;
     cf.module_type = NGX_HTTP_MODULE;
     cf.cmd_type = NGX_HTTP_MAIN_CONF;
