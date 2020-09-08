@@ -167,7 +167,7 @@ create_main_conf(ngx_conf_t *cf) {
         return NULL;
     }
 
-     if (ngx_array_init(&mcf->service_conns, cf->pool, 1,
+    if (ngx_array_init(&mcf->service_conns, cf->pool, 1,
             sizeof(service_conn)) != NGX_OK) {
         return NULL;
     }
@@ -1071,14 +1071,15 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     ngx_array_t *new_servers = NULL;
     ngx_array_t *old_servers = uscf->servers;
 
-    // create new temp main_conf with a new pool and new serverlists, copy info from existing conf except for the pool and serverlist
+    // create new temp main_conf with a new pools, new service_conns and new serverlists, copy info from existing conf except for the pools, service_conns and serverlists
     cf.pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, log);
     cf.ctx = mcf->conf_ctx;
 
     main_conf *tmp_mcf = create_main_conf(&cf);
     tmp_mcf->conf_ctx = mcf->conf_ctx;
-    tmp_mcf->service_conns = mcf->service_conns;
+    
 
+    // create new server list
     serverlist *new_sl = NULL;
     new_sl = ngx_array_push(&tmp_mcf->serverlists);
     if (new_sl == NULL) {
@@ -1094,6 +1095,39 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     tmp_mcf->service_concurrency = mcf->service_concurrency;
     tmp_mcf->service_url = mcf->service_url;
     tmp_mcf->conf_dump_dir = mcf->conf_dump_dir;
+
+    //create new conns
+    service_conn *new_sc = NULL;
+    new_sc = ngx_array_push(&tmp_mcf->service_conns);
+    ngx_memzero(new_sc, sizeof *new_sc);
+    new_sc->send.start = ngx_pcalloc(tmp_mcf->conf_pool, MAX_HTTP_REQUEST_SIZE);
+    if (new_sc->send.start == NULL) {
+        ngx_log_error(NGX_LOG_ERR, log, 0,
+            "upstream-serverlist: new allocate send buffer failed");
+        return NGX_ERROR;
+    }
+    new_sc->send.end = new_sc->send.start + MAX_HTTP_REQUEST_SIZE;
+    new_sc->send.last = new_sc->send.pos = new_sc->send.start;
+
+    new_sc->recv.start = ngx_pcalloc(tmp_mcf->conf_pool, ngx_pagesize);
+    if (new_sc->recv.start == NULL) {
+        ngx_log_error(NGX_LOG_ERR, log, 0,
+            "upstream-serverlist: new allocate recv buffer failed");
+        return NGX_ERROR;
+    }
+    new_sc->recv.end = new_sc->recv.start + MAX_HTTP_REQUEST_SIZE;
+    new_sc->recv.last = new_sc->recv.pos = new_sc->recv.start;
+
+    ngx_memzero(&new_sc->peer_conn, sizeof new_sc->peer_conn);
+    new_sc->peer_conn.data = NULL;
+    new_sc->peer_conn.log = log;
+    new_sc->peer_conn.log_error = NGX_ERROR_ERR;
+    new_sc->peer_conn.connection = NULL;
+    new_sc->peer_conn.get = ngx_event_get_peer;
+    new_sc->peer_conn.name = &tmp_mcf->service_url.host;
+    new_sc->peer_conn.sockaddr = &tmp_mcf->service_url.sockaddr.sockaddr;
+    new_sc->peer_conn.socklen = tmp_mcf->service_url.socklen;
+
 
     //new_servers = get_servers(mcf->conf_pool, body, log);
     new_servers = get_servers(tmp_mcf->conf_pool, body, log);
@@ -1158,6 +1192,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     dump_serverlist(sl);
 
     serverlist *old_sls = mcf->serverlists.elts;
+    service_conn *old_scs = mcf->service_conns.elts;
     ngx_uint_t i;
 
     for (i = 0; i < mcf->serverlists.nelts; i++) {
@@ -1169,6 +1204,11 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
         if (old_sls[i].new_pool) {
             ngx_destroy_pool(old_sls[i].new_pool);
             old_sls[i].new_pool = NULL;
+        }
+
+        if (old_scs[i].peer_conn.connection) {
+            ngx_close_connection(old_scs[i].peer_conn.connection);
+            old_scs[i].peer_conn.connection = NULL;
         }
     }
     return 0;
