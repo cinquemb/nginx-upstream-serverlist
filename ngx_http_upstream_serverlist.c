@@ -1071,14 +1071,26 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     ngx_array_t *new_servers = NULL;
     ngx_array_t *old_servers = uscf->servers;
 
-    // create new temp main_conf with a new pool, copy info from existing conf except for the pool
+    // create new temp main_conf with a new pool and new serverlists, copy info from existing conf except for the pool and serverlist
     cf.pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, log);
     cf.ctx = mcf->conf_ctx;
 
     main_conf *tmp_mcf = create_main_conf(&cf);
     tmp_mcf->conf_ctx = mcf->conf_ctx;
     tmp_mcf->service_conns = mcf->service_conns;
-    tmp_mcf->serverlists = mcf->serverlists;
+
+    serverlist *new_sl = NULL;
+    new_sl = ngx_array_push(&tmp_mcf->serverlists);
+    if (new_sl == NULL) {
+        ngx_log_error(NGX_LOG_ERR, log, 0,
+            "upstream-serverlist: temp serverlists conf %V failed", uscf->host);
+        return -1;
+    }
+    ngx_memzero(new_sl, sizeof *new_sl);
+    new_sl->upstream_conf = uscf;
+    new_sl->last_modified = -1;
+    new_sl->name = uscf->host;
+
     tmp_mcf->service_concurrency = mcf->service_concurrency;
     tmp_mcf->service_url = mcf->service_url;
     tmp_mcf->conf_dump_dir = mcf->conf_dump_dir;
@@ -1152,6 +1164,11 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
         if (old_sls[i].pool) {
             ngx_destroy_pool(old_sls[i].pool);
             old_sls[i].pool = NULL;
+        }
+
+        if (old_sls[i].new_pool) {
+            ngx_destroy_pool(old_sls[i].new_pool);
+            old_sls[i].new_pool = NULL;
         }
     }
     return 0;
