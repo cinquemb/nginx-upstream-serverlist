@@ -1134,12 +1134,6 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
         return -1;
     }
 
-    if (mcf->conf_pool != NULL) {
-        // destry old pool
-        ngx_destroy_pool(mcf->conf_pool);
-        mcf->conf_pool = NULL;
-    }
-
 #if (NGX_HTTP_UPSTREAM_CHECK)
     if (ngx_http_upstream_check_update_upstream_peers(uscf, cf.pool) !=
             NGX_OK) {
@@ -1150,6 +1144,12 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
 #endif
 
     dump_serverlist(sl);
+
+    if (mcf->conf_pool != NULL) {
+        // destry old pool
+        ngx_destroy_pool(mcf->conf_pool);
+        mcf->conf_pool = NULL;
+    }
     return 0;
 }
 
