@@ -1076,7 +1076,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     cf.ctx = mcf->conf_ctx;
 
     main_conf *tmp_mcf = create_main_conf(&cf);
-    tmp_mcf->conf_ctx= mcf->conf_ctx;
+    tmp_mcf->conf_ctx = mcf->conf_ctx;
     tmp_mcf->service_conns = mcf->service_conns;
     tmp_mcf->serverlists = mcf->serverlists;
     tmp_mcf->service_concurrency = mcf->service_concurrency;
@@ -1092,7 +1092,11 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     }
 
     if (!upstream_servers_changed(uscf->servers, new_servers)) {
-        ngx_destroy_pool(tmp_mcf->conf_pool);
+        if (tmp_mcf->conf_pool != NULL) {
+            // destry temp pool
+            ngx_destroy_pool(tmp_mcf->conf_pool);
+            tmp_mcf->conf_pool = NULL;
+        }
         ngx_log_debug(NGX_LOG_INFO, log, 0,
             "upstream-serverlist: serverlist %V nothing changed",&sl->name);
         // once return -1, everything in the old pool will kept and the new pool
