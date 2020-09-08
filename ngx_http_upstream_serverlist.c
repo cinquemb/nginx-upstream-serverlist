@@ -1146,19 +1146,12 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     dump_serverlist(sl);
 
     serverlist *old_sls = mcf->serverlists.elts;
-    service_conn *ols_scs = mcf->service_conns.elts;
     ngx_uint_t i;
 
     for (i = 0; i < mcf->serverlists.nelts; i++) {
         if (old_sls[i].pool) {
             ngx_destroy_pool(old_sls[i].pool);
             old_sls[i].pool = NULL;
-        }
-    }
-    for (i = 0; i < mcf->service_conns.nelts; i++) {
-        if (ols_scs[i].peer_conn.connection) {
-            ngx_close_connection(ols_scs[i].peer_conn.connection);
-            ols_scs[i].peer_conn.connection = NULL;
         }
     }
     return 0;
