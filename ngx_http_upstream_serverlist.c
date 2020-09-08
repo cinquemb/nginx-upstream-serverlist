@@ -1151,13 +1151,13 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
 
     for (i = 0; i < mcf->serverlists.nelts; i++) {
         if (old_sls[i].pool) {
-            ngx_destroy_pool(sls[i].pool);
+            ngx_destroy_pool(old_sls[i].pool);
             old_sls[i].pool = NULL;
         }
     }
     for (i = 0; i < mcf->service_conns.nelts; i++) {
         if (ols_scs[i].peer_conn.connection) {
-            ngx_close_connection(scs[i].peer_conn.connection);
+            ngx_close_connection(ols_scs[i].peer_conn.connection);
             ols_scs[i].peer_conn.connection = NULL;
         }
     }
