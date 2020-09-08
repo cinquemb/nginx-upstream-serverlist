@@ -1105,9 +1105,21 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
         //https://nginx.org/en/docs/dev/development_guide.html#pool
     */
 
-    ngx_pool_t *tmp_pool = ngx_create_pool(DEFAULT_SERVERLIST_POOL_SIZE, log);
+
+    // create new temp main_conf with a new pool, copy info from existing conf except for the pool
+    cf.pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, log);
+    cf.ctx = mcf->conf_ctx;
+
+    main_conf *tmp_mcf = create_main_conf(&cf);
+    tmp_mcf->conf_ctx= mcf->conf_ctx;
+    tmp_mcf->service_conns = mcf->service_conns;
+    tmp_mcf->serverlists = mcf->serverlists;
+    tmp_mcf->service_concurrency = mcf->service_concurrency;
+    tmp_mcf->service_url = mcf->service_url;
+    tmp_mcf->conf_dump_dir = mcf->conf_dump_dir;
+
     //new_servers = get_servers(mcf->conf_pool, body, log);
-    new_servers = get_servers(tmp_pool, body, log);
+    new_servers = get_servers(tmp_mcf->conf_pool, body, log);
     if (new_servers == NULL || new_servers->nelts <= 0) {
         ngx_log_error(NGX_LOG_ERR, log, 0,
             "upstream-serverlist: parse serverlist %V failed", &sl->name);
@@ -1115,7 +1127,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     }
 
     if (!upstream_servers_changed(uscf->servers, new_servers)) {
-        ngx_destroy_pool(tmp_pool);
+        ngx_destroy_pool(tmp_mcf->conf_pool);
         ngx_log_debug(NGX_LOG_INFO, log, 0,
             "upstream-serverlist: serverlist %V nothing changed",&sl->name);
         // once return -1, everything in the old pool will kept and the new pool
@@ -1127,15 +1139,13 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     ngx_memzero(&cf, sizeof cf);
     cf.name = "serverlist_init_upstream";
     cf.cycle = (ngx_cycle_t *) ngx_cycle;
+
     
-    // cf.pool = sl->new_pool;
-    mcf->conf_pool = tmp_pool;
-    
-    cf.pool = mcf->conf_pool;
+    cf.pool = tmp_mcf->conf_pool;
     cf.module_type = NGX_HTTP_MODULE;
     cf.cmd_type = NGX_HTTP_MAIN_CONF;
     cf.log = ngx_cycle->log;
-    cf.ctx = mcf->conf_ctx;
+    cf.ctx = tmp_mcf->conf_ctx;
 
     old_servers = uscf->servers;
     uscf->servers = new_servers;
@@ -1153,6 +1163,12 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
         // this may not work if old servers do not exist?
         ngx_http_upstream_init_round_robin(&cf, uscf);
         return -1;
+    }
+
+    if (mcf->conf_pool != NULL) {
+        // destry old pool
+        ngx_destroy_pool(mcf->conf_pool);
+        mcf->conf_pool = NULL;
     }
 
 #if (NGX_HTTP_UPSTREAM_CHECK)
