@@ -18,14 +18,6 @@
 #define CACHE_LINE_SIZE 128
 #define DEFAULT_SERVERLIST_POOL_SIZE 1024
 
-
-typedef struct
-{
-    ngx_queue_t queue;
-    ngx_pool_t *pool;
-    ngx_uint_t refer_num;               /* to count the upstream that refers this memory pool*/
-} serverlist_pool_node_t;
-
 typedef struct {
     ngx_pool_t                   *new_pool;
     ngx_pool_t                   *pool;
@@ -1078,33 +1070,6 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     ngx_conf_t cf = {0};
     ngx_array_t *new_servers = NULL;
     ngx_array_t *old_servers = uscf->servers;
-
-    // use mcf->pool, avoid coredump, will lead mem leak
-    // new_servers = get_servers(sl->new_pool, body, log);
-    /*
-        TODO: THE CONF POOL MUST BE CLEANED UP EVERYTIME THIS REFRESHES THE UPSTREAMS
-    */
-    /*
-    pool_node = ngx_palloc(
-        mcf->conf_pool, sizeof(serverlist_pool_node_t));
-    if (pool_node == NULL){
-        ngx_log_error(NGX_LOG_ERR, ev->log, 0,
-                      "upstream-serverlist: Could not create pool_node");
-        goto exit;
-    }
-    pool_node->pool = mcf->conf_pool;
-    pool_node->refer_num = 0;*/
-
-    /*
-
-        Try to add server a new pool
-        - if servers have changed
-            - swap new pool with old pool
-            - delete old pool
-
-        //https://nginx.org/en/docs/dev/development_guide.html#pool
-    */
-
 
     // create new temp main_conf with a new pool, copy info from existing conf except for the pool
     cf.pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, log);
