@@ -1205,11 +1205,11 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
             ngx_destroy_pool(old_sls[i].new_pool);
             old_sls[i].new_pool = NULL;
         }
-
+        /*
         if (old_scs[i].peer_conn.connection) {
             ngx_close_connection(old_scs[i].peer_conn.connection);
             old_scs[i].peer_conn.connection = NULL;
-        }
+        }*/
     }
     return 0;
 }
