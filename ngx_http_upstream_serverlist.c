@@ -1189,6 +1189,8 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     }
 #endif
 
+
+    ngx_shmtx_unlock(&new_sl->dump_file_lock);
     dump_serverlist(new_sl);
 
     serverlist *old_sls = mcf->serverlists.elts;
