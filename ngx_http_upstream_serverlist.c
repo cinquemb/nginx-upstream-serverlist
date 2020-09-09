@@ -1190,7 +1190,22 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
 #endif
 
 
-    ngx_shmtx_unlock(&new_sl->dump_file_lock);
+    ngx_shm_t shm = {0};
+    shm.size = CACHE_LINE_SIZE * tmp_mcf->serverlists.nelts;
+    shm.log = log;
+    ngx_str_set(&shm.name, "upstream-serverlist-shared-zone");
+    if (ngx_shm_alloc(&shm) != NGX_OK) {
+        return -1;
+    }
+    for (uint i = 0; i < tmp_mcf->serverlists.nelts; i++) {
+        serverlist *temp_sl = (serverlist *)tmp_mcf->serverlists.elts + i;
+        ngx_int_t ret = ngx_shmtx_create(&temp_sl->dump_file_lock,
+            (ngx_shmtx_sh_t *)(shm.addr + CACHE_LINE_SIZE * i), NULL);
+        if ( ret != NGX_OK) {
+            return -1;
+        }
+    }
+
     dump_serverlist(new_sl);
 
     serverlist *old_sls = mcf->serverlists.elts;
