@@ -1127,34 +1127,6 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     new_sc->peer_conn.sockaddr = &tmp_mcf->service_url.sockaddr.sockaddr;
     new_sc->peer_conn.socklen = tmp_mcf->service_url.socklen;
 
-
-    ngx_uint_t blocksize = 0;
-    if (tmp_mcf->serverlists.nelts >= tmp_mcf->service_concurrency) {
-        blocksize = (tmp_mcf->serverlists.nelts + (tmp_mcf->service_concurrency - 1))
-            / tmp_mcf->service_concurrency;
-    } else {
-        blocksize = 1;
-    }
-
-    new_sc->serverlists_start = ngx_min(tmp_mcf->serverlists.nelts,
-            0 + blocksize);
-    new_sc->serverlists_end = ngx_min(tmp_mcf->serverlists.nelts,
-            new_sc->serverlists_start + blocksize);
-    new_sc->serverlists_curr = new_sc->serverlists_start;
-
-    for (ngx_uint_t i = 0; i < tmp_mcf->service_conns.nelts; i++) {
-        service_conn *tmp_sc = (service_conn *)tmp_mcf->service_conns.elts + i;
-        tmp_sc->timeout_timer.handler = refresh_timeout_handler;
-        tmp_sc->timeout_timer.log = log;
-        tmp_sc->timeout_timer.data = tmp_sc;
-        tmp_sc->refresh_timer.handler = connect_to_service;
-        tmp_sc->refresh_timer.log = log;
-        tmp_sc->refresh_timer.data = tmp_sc;
-        if ((ngx_uint_t)tmp_sc->serverlists_start < tmp_mcf->serverlists.nelts) {
-            ngx_add_timer(&tmp_sc->refresh_timer, random_interval_ms());
-        }
-    }
-
     //new_servers = get_servers(mcf->conf_pool, body, log);
     new_servers = get_servers(tmp_mcf->conf_pool, body, log);
     if (new_servers == NULL || new_servers->nelts <= 0) {
@@ -1192,6 +1164,35 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     uscf->servers = new_servers;
 
     ngx_array_t *old_service_conns = &mcf->service_conns;
+
+
+
+    ngx_uint_t blocksize = 0;
+    if (tmp_mcf->serverlists.nelts >= tmp_mcf->service_concurrency) {
+        blocksize = (tmp_mcf->serverlists.nelts + (tmp_mcf->service_concurrency - 1))
+            / tmp_mcf->service_concurrency;
+    } else {
+        blocksize = 1;
+    }
+
+    new_sc->serverlists_start = ngx_min(tmp_mcf->serverlists.nelts,
+            0 + blocksize);
+    new_sc->serverlists_end = ngx_min(tmp_mcf->serverlists.nelts,
+            new_sc->serverlists_start + blocksize);
+    new_sc->serverlists_curr = new_sc->serverlists_start;
+
+    for (ngx_uint_t i = 0; i < tmp_mcf->service_conns.nelts; i++) {
+        service_conn *tmp_sc = (service_conn *)tmp_mcf->service_conns.elts + i;
+        tmp_sc->timeout_timer.handler = refresh_timeout_handler;
+        tmp_sc->timeout_timer.log = log;
+        tmp_sc->timeout_timer.data = tmp_sc;
+        tmp_sc->refresh_timer.handler = connect_to_service;
+        tmp_sc->refresh_timer.log = log;
+        tmp_sc->refresh_timer.data = tmp_sc;
+        if ((ngx_uint_t)tmp_sc->serverlists_start < tmp_mcf->serverlists.nelts) {
+            ngx_add_timer(&tmp_sc->refresh_timer, random_interval_ms());
+        }
+    }
 
 
     if (ngx_http_upstream_init_round_robin(&cf, uscf) != NGX_OK) {
