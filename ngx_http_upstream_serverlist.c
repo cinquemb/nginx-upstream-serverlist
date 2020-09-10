@@ -1129,6 +1129,33 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     new_sc->peer_conn.socklen = tmp_mcf->service_url.socklen;
 
 
+    ngx_uint_t blocksize = 0;
+    if (tmp_mcf->serverlists.nelts >= tmp_mcf->service_concurrency) {
+        blocksize = (tmp_mcf->serverlists.nelts + (tmp_mcf->service_concurrency - 1))
+            / tmp_mcf->service_concurrency;
+    } else {
+        blocksize = 1;
+    }
+
+    new_sc->serverlists_start = ngx_min(tmp_mcf->serverlists.nelts,
+            0 + blocksize);
+    new_sc->serverlists_end = ngx_min(tmp_mcf->serverlists.nelts,
+            new_sc->serverlists_start + blocksize);
+    new_sc->serverlists_curr = new_sc->serverlists_start;
+
+    for (int i = 0; i < tmp_mcf->service_conns.nelts; i++) {
+        service_conn *tmp_sc = (service_conn *)tmp_mcf->service_conns.elts + i;
+        tmp_sc->timeout_timer.handler = refresh_timeout_handler;
+        tmp_sc->timeout_timer.log = log;
+        tmp_sc->timeout_timer.data = tmp_sc;
+        tmp_sc->refresh_timer.handler = connect_to_service;
+        tmp_sc->refresh_timer.log = log;
+        tmp_sc->refresh_timer.data = tmp_sc;
+        if ((ngx_uint_t)tmp_sc->serverlists_start < tmp_mcf->serverlists.nelts) {
+            ngx_add_timer(&tmp_sc->refresh_timer, random_interval_ms());
+        }
+    }
+
     //new_servers = get_servers(mcf->conf_pool, body, log);
     new_servers = get_servers(tmp_mcf->conf_pool, body, log);
     if (new_servers == NULL || new_servers->nelts <= 0) {
@@ -1189,7 +1216,6 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     }
 #endif
 
-
     ngx_shm_t shm = {0};
     shm.size = CACHE_LINE_SIZE * tmp_mcf->serverlists.nelts;
     shm.log = log;
@@ -1209,10 +1235,15 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     dump_serverlist(new_sl);
 
     serverlist *old_sls = mcf->serverlists.elts;
-    //service_conn *old_scs = mcf->service_conns.elts;
+    service_conn *old_scs = mcf->service_conns.elts;
     ngx_uint_t i;
 
     for (i = 0; i < mcf->serverlists.nelts; i++) {
+        /*if (old_scs[i].peer_conn.connection) {
+            ngx_close_connection(old_scs[i].peer_conn.connection);
+            old_scs[i].peer_conn.connection = NULL;
+        }*/
+
         if (old_sls[i].pool) {
             ngx_destroy_pool(old_sls[i].pool);
             old_sls[i].pool = NULL;
@@ -1222,17 +1253,23 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
             ngx_destroy_pool(old_sls[i].new_pool);
             old_sls[i].new_pool = NULL;
         }
-        
-        /*if (old_scs[i].peer_conn.connection) {
-            ngx_close_connection(old_scs[i].peer_conn.connection);
-            old_scs[i].peer_conn.connection = NULL;
-        }*/
     }
+
+    /*if (old_sls != NULL) {
+        ngx_array_destroy(old_sls);
+        old_sls = NULL;
+    }*/
 
     if (old_servers != NULL) {
         // destry old old_servers
         ngx_array_destroy(old_servers);
         old_servers = NULL;
+    }
+
+    if (old_scs != NULL) {
+        // destroy oll conds
+        ngx_array_destroy(old_scs);
+        old_scs = NULL;
     }
 
     /*
