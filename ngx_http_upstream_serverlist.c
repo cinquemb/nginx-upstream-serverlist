@@ -1142,7 +1142,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
             new_sc->serverlists_start + blocksize);
     new_sc->serverlists_curr = new_sc->serverlists_start;
 
-    for (ngx_uint_t i = 0; i < tmp_mcf->service_conns.nelts; i++) {
+    /*for (ngx_uint_t i = 0; i < tmp_mcf->service_conns.nelts; i++) {
         service_conn *tmp_sc = (service_conn *)tmp_mcf->service_conns.elts + i;
         tmp_sc->timeout_timer.handler = refresh_timeout_handler;
         tmp_sc->timeout_timer.log = log;
@@ -1153,7 +1153,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
         if ((ngx_uint_t)tmp_sc->serverlists_start < tmp_mcf->serverlists.nelts) {
             ngx_add_timer(&tmp_sc->refresh_timer, random_interval_ms());
         }
-    }
+    }*/
 
     //new_servers = get_servers(mcf->conf_pool, body, log);
     new_servers = get_servers(tmp_mcf->conf_pool, body, log);
@@ -1191,7 +1191,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     ngx_array_t *old_servers = uscf->servers;
     uscf->servers = new_servers;
 
-    //ngx_array_t *old_service_conns = &mcf->service_conns;
+    ngx_array_t *old_service_conns = &mcf->service_conns;
 
 
     if (ngx_http_upstream_init_round_robin(&cf, uscf) != NGX_OK) {
@@ -1257,11 +1257,11 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
         old_servers = NULL;
     }
 
-    /*if (old_service_conns != NULL) {
+    if (old_service_conns != NULL) {
         // destroy oll conds
         ngx_array_destroy(old_service_conns);
         old_service_conns = NULL;
-    }*/
+    }
 
     /*
     if (mcf->conf_pool != NULL) {
