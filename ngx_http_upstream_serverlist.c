@@ -1237,8 +1237,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     dump_serverlist(new_sl);
 
     serverlist *old_sls = mcf->serverlists.elts;
-    service_conn *old_scs = mcf->service_conns.elts;
-
+    
     for (ngx_uint_t i = 0; i < mcf->serverlists.nelts; i++) {
 
         if (old_sls[i].pool) {
