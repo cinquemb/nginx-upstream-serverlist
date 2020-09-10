@@ -1068,9 +1068,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
         ngx_http_upstream_serverlist_module);
     ngx_http_upstream_srv_conf_t *uscf = sl->upstream_conf;
     ngx_conf_t cf = {0};
-    ngx_array_t *new_servers = NULL;
-    ngx_array_t *new_service_conns = NULL;
-    
+    ngx_array_t *new_servers = NULL;    
 
     // create new temp main_conf with a new pools, new service_conns and new serverlists, copy info from existing conf except for the pools, service_conns and serverlists
     cf.pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, log);
@@ -1193,7 +1191,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     ngx_array_t *old_servers = uscf->servers;
     uscf->servers = new_servers;
 
-    ngx_array_t *old_service_conns = mcf->service_conns;
+    ngx_array_t *old_service_conns = &mcf->service_conns;
 
 
     if (ngx_http_upstream_init_round_robin(&cf, uscf) != NGX_OK) {
@@ -1269,10 +1267,10 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
         old_servers = NULL;
     }
 
-    if (old_scs != NULL) {
+    if (old_service_conns != NULL) {
         // destroy oll conds
-        ngx_array_destroy(&mcf->service_conns);
-        old_scs = NULL;
+        ngx_array_destroy(old_service_conns);
+        old_service_conns = NULL;
     }
 
     /*
