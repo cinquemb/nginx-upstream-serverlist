@@ -1069,7 +1069,8 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     ngx_http_upstream_srv_conf_t *uscf = sl->upstream_conf;
     ngx_conf_t cf = {0};
     ngx_array_t *new_servers = NULL;
-    ngx_array_t *old_servers = uscf->servers;
+    ngx_array_t *new_service_conns = NULL;
+    
 
     // create new temp main_conf with a new pools, new service_conns and new serverlists, copy info from existing conf except for the pools, service_conns and serverlists
     cf.pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, log);
@@ -1189,8 +1190,11 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     cf.log = ngx_cycle->log;
     cf.ctx = tmp_mcf->conf_ctx;
 
-    old_servers = uscf->servers;
+    ngx_array_t *old_servers = uscf->servers;
     uscf->servers = new_servers;
+
+    ngx_array_t *old_service_conns = mcf->service_conns;
+
 
     if (ngx_http_upstream_init_round_robin(&cf, uscf) != NGX_OK) {
         // see: https://github.com/GUI/nginx-upstream-dynamic-servers/pull/33/files
@@ -1238,10 +1242,10 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     service_conn *old_scs = mcf->service_conns.elts;
 
     for (ngx_uint_t i = 0; i < mcf->serverlists.nelts; i++) {
-        /*if (old_scs[i].peer_conn.connection) {
+        if (old_scs[i].peer_conn.connection) {
             ngx_close_connection(old_scs[i].peer_conn.connection);
             old_scs[i].peer_conn.connection = NULL;
-        }*/
+        }
 
         if (old_sls[i].pool) {
             ngx_destroy_pool(old_sls[i].pool);
