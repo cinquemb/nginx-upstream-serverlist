@@ -1191,7 +1191,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     ngx_array_t *old_servers = uscf->servers;
     uscf->servers = new_servers;
 
-    ngx_array_t *old_service_conns = &mcf->service_conns;
+    //ngx_array_t *old_service_conns = &mcf->service_conns;
 
 
     if (ngx_http_upstream_init_round_robin(&cf, uscf) != NGX_OK) {
