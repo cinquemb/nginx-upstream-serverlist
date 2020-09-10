@@ -1126,7 +1126,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     new_sc->peer_conn.name = &tmp_mcf->service_url.host;
     new_sc->peer_conn.sockaddr = &tmp_mcf->service_url.sockaddr.sockaddr;
     new_sc->peer_conn.socklen = tmp_mcf->service_url.socklen;
-    /*
+
 
     ngx_uint_t blocksize = 0;
     if (tmp_mcf->serverlists.nelts >= tmp_mcf->service_concurrency) {
@@ -1140,7 +1140,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
             0 + blocksize);
     new_sc->serverlists_end = ngx_min(tmp_mcf->serverlists.nelts,
             new_sc->serverlists_start + blocksize);
-    new_sc->serverlists_curr = new_sc->serverlists_start;*/
+    new_sc->serverlists_curr = new_sc->serverlists_start;
 
     for (ngx_uint_t i = 0; i < tmp_mcf->service_conns.nelts; i++) {
         service_conn *tmp_sc = (service_conn *)tmp_mcf->service_conns.elts + i;
