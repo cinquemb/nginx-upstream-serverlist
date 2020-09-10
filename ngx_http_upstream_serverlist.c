@@ -1237,7 +1237,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     dump_serverlist(new_sl);
 
     serverlist *old_sls = mcf->serverlists.elts;
-    
+
     for (ngx_uint_t i = 0; i < mcf->serverlists.nelts; i++) {
 
         if (old_sls[i].pool) {
@@ -1257,11 +1257,11 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
         old_servers = NULL;
     }
 
-    if (old_service_conns != NULL) {
+    /*if (old_service_conns != NULL) {
         // destroy oll conds
         ngx_array_destroy(old_service_conns);
         old_service_conns = NULL;
-    }
+    }*/
 
     /*
     if (mcf->conf_pool != NULL) {
