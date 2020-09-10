@@ -1164,8 +1164,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     uscf->servers = new_servers;
 
     ngx_array_t *old_service_conns = &mcf->service_conns;
-
-
+    ngx_array_t *old_serverlists = &mcf->serverlists;
 
     ngx_uint_t blocksize = 0;
     if (tmp_mcf->serverlists.nelts >= tmp_mcf->service_concurrency) {
@@ -1259,9 +1258,15 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     }
 
     if (old_service_conns != NULL) {
-        // destroy oll conds
+        // destroy old conns
         ngx_array_destroy(old_service_conns);
         old_service_conns = NULL;
+    }
+
+    if (old_serverlists != NULL) {
+        // destroy old old_serverlists
+        ngx_array_destroy(old_serverlists);
+        old_serverlists = NULL;
     }
 
     /*
