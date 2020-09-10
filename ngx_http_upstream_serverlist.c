@@ -1143,7 +1143,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
             new_sc->serverlists_start + blocksize);
     new_sc->serverlists_curr = new_sc->serverlists_start;
 
-    for (int i = 0; i < tmp_mcf->service_conns.nelts; i++) {
+    for (ngx_uint_t i = 0; i < tmp_mcf->service_conns.nelts; i++) {
         service_conn *tmp_sc = (service_conn *)tmp_mcf->service_conns.elts + i;
         tmp_sc->timeout_timer.handler = refresh_timeout_handler;
         tmp_sc->timeout_timer.log = log;
@@ -1223,7 +1223,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     if (ngx_shm_alloc(&shm) != NGX_OK) {
         return -1;
     }
-    for (uint i = 0; i < tmp_mcf->serverlists.nelts; i++) {
+    for (ngx_uint_t i = 0; i < tmp_mcf->serverlists.nelts; i++) {
         serverlist *temp_sl = (serverlist *)tmp_mcf->serverlists.elts + i;
         ngx_int_t ret = ngx_shmtx_create(&temp_sl->dump_file_lock,
             (ngx_shmtx_sh_t *)(shm.addr + CACHE_LINE_SIZE * i), NULL);
@@ -1236,9 +1236,8 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
 
     serverlist *old_sls = mcf->serverlists.elts;
     service_conn *old_scs = mcf->service_conns.elts;
-    ngx_uint_t i;
 
-    for (i = 0; i < mcf->serverlists.nelts; i++) {
+    for (ngx_uint_t i = 0; i < mcf->serverlists.nelts; i++) {
         /*if (old_scs[i].peer_conn.connection) {
             ngx_close_connection(old_scs[i].peer_conn.connection);
             old_scs[i].peer_conn.connection = NULL;
@@ -1268,7 +1267,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
 
     if (old_scs != NULL) {
         // destroy oll conds
-        ngx_array_destroy(old_scs);
+        ngx_array_destroy(&mcf->service_conns);
         old_scs = NULL;
     }
 
