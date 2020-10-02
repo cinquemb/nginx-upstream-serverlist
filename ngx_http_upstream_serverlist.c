@@ -48,10 +48,12 @@ typedef struct {
 typedef struct {
     ngx_http_conf_ctx_t          *conf_ctx;
     ngx_pool_t                   *conf_pool;
+    ngx_pool_t                   *prev_conf_pool;
     ngx_array_t                   service_conns;
     ngx_array_t                   serverlists;
 
     ngx_uint_t                    service_concurrency;
+    ngx_int_t                     conf_pool_count;
     ngx_url_t                     service_url;
     ngx_str_t                     conf_dump_dir;
 } main_conf;
@@ -180,6 +182,8 @@ create_main_conf(ngx_conf_t *cf) {
     mcf->service_concurrency = DEFAULT_SERVICE_CONCURRENCY;
     mcf->conf_ctx = cf->ctx;
     mcf->conf_pool = cf->pool;
+    mcf->conf_pool_count = 0; 
+    
     return mcf;
 }
 
@@ -1076,6 +1080,9 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
 
     main_conf *tmp_mcf = create_main_conf(&cf);
     tmp_mcf->conf_ctx = mcf->conf_ctx;
+
+    //copy over previous count
+    tmp_mcf->conf_pool_count = mcf->conf_pool_count;
     
 
     // create new server list
@@ -1269,13 +1276,17 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
         old_serverlists = NULL;
     }
 
-    /*
-    if (mcf->conf_pool != NULL) {
-        // destry old conf_pool
-        ngx_destroy_pool(mcf->conf_pool);
-        mcf->conf_pool = NULL;
-    }*/
+    if (tmp_mcf->conf_pool_count > 0){
+        //destry previous pool
+        if (tmp_mcf->prev_conf_pool != NULL) {
+            // destry old conf_pool
+            ngx_destroy_pool(tmp_mcf->prev_conf_pool);
+            tmp_mcf->prev_conf_pool = NULL;
+        }
+    }
     
+    tmp_mcf->prev_conf_pool = mcf->conf_pool;
+    tmp_mcf->conf_pool_count++;
     return 0;
 }
 
