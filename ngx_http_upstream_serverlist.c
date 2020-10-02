@@ -1076,10 +1076,16 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
 
     // create new temp main_conf with a new pools, new service_conns and new serverlists, copy info from existing conf except for the pools, service_conns and serverlists
     cf.pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, log);
-    cf.ctx = mcf->conf_ctx;
+
+    ngx_http_conf_ctx_t *ctx = NULL;
+    ctx = ngx_pcalloc(cf.pool, sizeof(ngx_http_conf_ctx_t));
+    if (ctx == NULL) {
+        return -1;
+    }
+    ctx = mcf->conf_ctx;
+    cf.ctx = ctx;
 
     main_conf *tmp_mcf = create_main_conf(&cf);
-    tmp_mcf->conf_ctx = mcf->conf_ctx;
 
     //copy over previous count
     tmp_mcf->conf_pool_count = mcf->conf_pool_count;
