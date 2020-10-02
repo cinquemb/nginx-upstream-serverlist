@@ -1558,8 +1558,13 @@ recv_from_service(ngx_event_t *ev) {
         // the pool is NULL at first run.
         ngx_destroy_pool(sl->pool);
     }
+
     sl->pool = sl->new_pool;
-    sl->new_pool = NULL;
+
+    if (sl->new_pool != NULL) {
+        ngx_destroy_pool(sl->new_pool);
+        sl->new_pool = NULL;
+    }
 
 exit:
     if (sc->serverlists_curr + 1 >= sc->serverlists_end) {
