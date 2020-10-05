@@ -1100,16 +1100,7 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
         return -1;
     }
     ngx_memzero(new_sl, sizeof *new_sl);
-    /* 
-        need to use a upstream conf with new:
-            ctx # (ngx_pcalloc) - > ngx_pfree
-            srv_conf # (ngx_pcalloc) -> ngx_pfree
-            loc_conf # (ngx_pcalloc) -> ngx_pfree
-            servers # this is done (ngx_array_create) -> ngx_array_destroy
-
-            maybe try resetting pool? ngx_reset_pool
-    */
-    new_sl->upstream_conf = uscf; // uscf->pool needs to be destroyed or the above needs to be reset
+    new_sl->upstream_conf = uscf; // uscf->pool needs to be destroyed or the above needs to be reset?
     new_sl->last_modified = -1;
     new_sl->name = uscf->host;
 
@@ -1302,12 +1293,6 @@ refresh_upstream(serverlist *sl, ngx_str_t *body, ngx_log_t *log) {
     
     tmp_mcf->prev_conf_pool = mcf->conf_pool;
     tmp_mcf->conf_pool_count++;
-
-    // free old sl
-    if (sl != NULL) {
-        ngx_free(sl);
-        sl = NULL;
-    } 
     return 0;
 }
 
